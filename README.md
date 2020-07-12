@@ -14,12 +14,24 @@ standard c libraries stdio.h, stdlib.h, and inttypes.h.
 # Building
 Build process was designed for Linux and gcc. 
 
-Run _make_ to build the software. 
+To build the software run:
+```
+make
+```
 
-To make a debugging version, for use in gdb, run _make debug_.
+To make a debugging version, for use in gdb, run 
+```
+make debug
+```
 
-Run the example program by running _./bitmap_ 
+Run the example program by running 
+```
+./bitmap
+```
 
-Running _make install_ will put the contents of the include/ and lib/ 
-directories into the /usr/local/ directory. 
+To install, which will put the contents of the include/ and lib/ 
+directories into the /usr/local/ directory, run:
+```
+make install
+```
 
