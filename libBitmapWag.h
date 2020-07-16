@@ -16,6 +16,11 @@
 #ifndef LIB_BITMAP_WAG
 #define LIB_BITMAP_WAG
 
+// Added to make library compatible with C and C++. 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <inttypes.h> 
 
 // Errors that can come from bitmap operations
@@ -244,6 +249,11 @@ BitmapWagError SetColorUsedArrayBitmapWag(BitmapWagImg * bm,
  */
 BitmapWagError GetBitmapWagPixel(const BitmapWagImg * bm, 
     const uint32_t x, const uint32_t y, BitmapWagRgbQuad * color);
+
+// Added to make library compatible with C and C++. 
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIB_BITMAP_WAG
 
