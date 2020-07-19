@@ -780,11 +780,14 @@ BitmapWagError GetBitmapWagPixel(const BitmapWagImg * bm,
         // Mask holds the right shifted bit masks
         uint8_t mask = (0xFF >> (8 - bitsPerPixel));
 
-        color->rgbBlue = (bm->aColors)[(value >> sftAmnt) & mask].rgbBlue;
-        color->rgbGreen = (bm->aColors)[(value >> sftAmnt) & mask].rgbGreen;
-        color->rgbRed = (bm->aColors)[(value >> sftAmnt) & mask].rgbRed;
-        color->rgbReserved = 
-            (bm->aColors)[(value >> sftAmnt) & mask].rgbReserved;
+        // Snipe out the bit(s) of the pixel that are used to look up a color 
+        // in the palette 
+        value = (value >> sftAmnt) & mask;
+
+        color->rgbBlue = (bm->aColors)[value].rgbBlue;
+        color->rgbGreen = (bm->aColors)[value].rgbGreen;
+        color->rgbRed = (bm->aColors)[value].rgbRed;
+        color->rgbReserved = (bm->aColors)[value].rgbReserved;
     }
 
     // biBitCount will either be 16 or 24 when a color palette is not being used
