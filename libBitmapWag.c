@@ -189,6 +189,12 @@ BitmapWagError ReadBitmapWag(BitmapWagImg * bm, const char * filePath)
     // Find the amount of memory that needs to be allocated for the image array
     size_t rowMemory = GetRowMemory(width, bitsPerPixel);
 
+    // fseek ahead if the bmih was larger than this library anticipated
+    if(bm->bmih.biSize > sizeof(bm->bmih))
+    {
+        fseek(fp, bm->bmih.biSize - sizeof(bm->bmih), SEEK_CUR);
+    }
+
     // Read the color palette if we're using 256-colors or less
     if(bm->bmih.biBitCount <= 8)
     {
