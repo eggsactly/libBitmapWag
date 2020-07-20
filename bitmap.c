@@ -41,10 +41,10 @@ int main()
     const unsigned height = 8;
 
     // Valid pixel sizes are 1, 2, 4, 8, 16, 24
-    const unsigned bitsPerPixel = 4;
+    const unsigned bitsPerPixel = 1;
 
     // This is the name of the output file this program writes 
-    const char outputFile[] = "test.bmp";
+    const char outputFile[] = "checker-board.bmp";
 
     fprintf(stderr, "%s: info: BitmapWag API version: %d.%d.%d\n", APP_NAME, 
             MajorVersionBitmapWag(), MinorVersionBitmapWag(), 
@@ -72,12 +72,13 @@ int main()
         }
     }
 
-    // Write a black and white gradient from left to right
+    // Write a checkerboard
     for(unsigned i = 0; i < width; i++)
     {
-        for(unsigned j = 0; j < width; j++)
+        for(unsigned j = 0; j < height; j++)
         {
-            error = SetBitmapWagPixel(&img, i, j, i * 32, i * 32, i * 32, 
+            error = SetBitmapWagPixel(&img, i, j, 
+                ((i+j) & 1) * 0xFF, ((i+j) & 1) * 0xFF, ((i+j) & 1) * 0xFF, 
                 colorUsed);
 
             if(error)
