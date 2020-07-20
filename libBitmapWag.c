@@ -728,6 +728,15 @@ BitmapWagError SetBitmapWagPixel(BitmapWagImg * bm, const uint32_t x,
         (bm->aBitmapBits)[y*rowMemory + 3*x + 1] = g;
         (bm->aBitmapBits)[y*rowMemory + 3*x + 2] = r;
     }
+
+    else if(bm->bmih.biBitCount == 32)
+    {
+        (bm->aBitmapBits)[y*rowMemory + 4*x] = b;
+        (bm->aBitmapBits)[y*rowMemory + 4*x + 1] = g;
+        (bm->aBitmapBits)[y*rowMemory + 4*x + 2] = r;
+        (bm->aBitmapBits)[y*rowMemory + 4*x + 3] = 0;
+    }
+
     else
     {
         return BITMAPWAG_BIBITS_NOT_SUPPORTED;
@@ -815,6 +824,13 @@ BitmapWagError GetBitmapWagPixel(const BitmapWagImg * bm,
         color->rgbGreen = (bm->aBitmapBits)[y*rowMemory + 3*x + 1];
         color->rgbRed = (bm->aBitmapBits)[y*rowMemory + 3*x + 2];
         color->rgbReserved = 0;
+    }
+    else if(bm->bmih.biBitCount == 32)
+    {
+        color->rgbBlue = (bm->aBitmapBits)[y*rowMemory + 4*x];
+        color->rgbGreen = (bm->aBitmapBits)[y*rowMemory + 4*x + 1];
+        color->rgbRed = (bm->aBitmapBits)[y*rowMemory + 4*x + 2];
+        color->rgbReserved = (bm->aBitmapBits)[y*rowMemory + 4*x + 3];
     }
     else
     {
