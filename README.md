@@ -39,13 +39,13 @@ After installation you will need to make sure that /usr/local/lib is in you
 LD\_LIBRARY\_PATH so that the dynamic linker can find the library when you 
 run code that links to it. 
 ```
-echo $LD\_LIBRARY\_PATH
+echo $LD_LIBRARY_PATH
 ```
 
 If the path does not get returned, then you will need to add the following 
 line to your _.profile_ file in your /home/username area. 
 ```
-export LD\_LIBRARY\_PATH=$LD\_LIBRARY\_PATH:/usr/local/lib
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 ````
 
 Either source your .profile file or log out and log back in and then you will 
