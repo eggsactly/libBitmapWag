@@ -75,8 +75,10 @@ uint32_t GetRowMemory(uint32_t width, uint16_t bitsPerPixel)
         * (width >> (4 - ceilLog2b16_t(bitsPerPixel)))) 
         + (width * (bitsPerPixel >> 3)); 
 
+    const unsigned bytesAtEnd = 4;
     // Make sure there's enough space for each row to end on a four byte bound
-    rowMemory += (rowMemory % 4);
+    rowMemory += ((rowMemory % bytesAtEnd) != 0) * 
+        (bytesAtEnd - (rowMemory % bytesAtEnd));
 
     return rowMemory;
 }
@@ -126,9 +128,9 @@ const char * ErrorsToStringBitmapWag(const BitmapWagError error)
         case BITMAPWAG_BMIH_NOT_READ:
             return "bitmap BMIH not read";
         case BITMAPWAG_ACOLORS_NOT_READ:
-            return "bitmap aColors not read";
+            return "bitmap color palette portion of file not read";
         case BITMAPWAG_BITMAPBITS_NOT_READ:
-            return "bitmap bitmap bits not read";
+            return "bitmap image portion of file not read";
         default: 
             return "unknown error"; 
     }
