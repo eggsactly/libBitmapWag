@@ -31,10 +31,6 @@ int main()
 
     // BitmapWagError is an enum containing error codes
     BitmapWagError error;
-
-    // colorUsed is an array used to keep track of which colors in the color
-    // palette are being used to 
-    uint8_t colorUsed[256] = {0};
     
     // Bitmap dimensions 
     const unsigned width = 8;
@@ -59,27 +55,13 @@ int main()
         return -1;
     }
 
-    // Initialized the color used array 
-    if(bitsPerPixel <= 8)
-    {
-        error = SetColorUsedArrayBitmapWag(&img, colorUsed);
-
-        if(error)
-        {
-            fprintf(stderr, "%s: error: SetColorUsedArrayBitmapWag: %s.\n", 
-                APP_NAME, ErrorsToStringBitmapWag(error));
-            return -1;
-        }
-    }
-
     // Write a checkerboard
     for(unsigned i = 0; i < width; i++)
     {
         for(unsigned j = 0; j < height; j++)
         {
             error = SetBitmapWagPixel(&img, i, j, 
-                ((i+j) & 1) * 0xFF, ((i+j) & 1) * 0xFF, ((i+j) & 1) * 0xFF, 
-                colorUsed);
+                ((i+j) & 1) * 0xFF, ((i+j) & 1) * 0xFF, ((i+j) & 1) * 0xFF);
 
             if(error)
             {

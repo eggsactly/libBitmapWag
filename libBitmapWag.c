@@ -35,7 +35,9 @@ const unsigned int PatchVersionBitmapWag(void)
 
 /**
  * ceilLog2b16_t finds the log base 2 of a 16 bit integer and if there is a 
- * decimal, rounds up to the nearest integer.
+ * decimal, rounds up to the nearest integer. 
+ * This is used internally by the libBitmapWag library. 
+ *
  * @param input the value to take the log of
  * @return ceil(log2(input)) 
  */
@@ -64,7 +66,8 @@ uint16_t ceilLog2b16_t (const uint16_t input)
 
 /**
  * Find the amount of memory that needs to be allocated for the image array
- *
+ * This is used internally by the libBitmapWag library. 
+ * 
  * @param width of image
  * @param bitsPerPixel of each pixel
  * @return the amount of memory that needs to be allocated for each row
@@ -81,6 +84,70 @@ uint32_t GetRowMemory(uint32_t width, uint16_t bitsPerPixel)
         (bytesAtEnd - (rowMemory % bytesAtEnd));
 
     return rowMemory;
+}
+
+/**
+ * SetColorUsedArrayBitmapWag populates the 256 bit array colorUsed. 
+ * This speeds up the function SetBitmapWagPixel when color palettes are used 
+ * because the 256 byte array would need to be reconstructed each call 
+ * otherwise. 
+ * This is used internally by the libBitmapWag library. 
+ *
+ * @param bm pointer to a bitmap struct
+ * @param colorUsed pointer to a 256 byte array for keeping track of which 
+ *        colors in the color palette have been used. 
+ * @return BITMAPWAG_SUCCESS if successful
+ */
+BitmapWagError SetColorUsedArrayBitmapWag(BitmapWagImg * bm, 
+    uint8_t * colorUsed)
+{
+    size_t bitsPerPixel = bm->bmih.biBitCount;
+    size_t width = bm->bmih.biWidth;
+    size_t height = bm->bmih.biHeight;
+
+    // Find the amount of memory that needs to be allocated for the image array
+    size_t rowMemory = GetRowMemory(width, bitsPerPixel);
+
+    // Null check on bitmap pointer
+    if(bm == NULL)
+    {
+        return BITMAPWAG_NULL;
+    }
+    if(colorUsed == NULL)
+    {
+        return BITMAPWAG_COLOR_ARRAY_NULL;
+    }
+    // Check to on the bitmap bits pointer
+    if(bm->aBitmapBits == NULL)
+    {
+        return BITMAPWAG_BITMAPBITS_NULL;
+    }
+
+    // If a color palette is not being used 
+    if(bm->bmih.biBitCount > 8)
+    {
+        return BITMAPWAG_NO_COLOR_PALETTE; 
+    }
+
+    // Set the index, each pixel contains, to one in the colorUsed array 
+    for(uint32_t i = 0; i < width; i++)
+    {
+        for(uint32_t j = 0; j < height; j++)
+        {
+            uint8_t value = 
+            (bm->aBitmapBits)
+            [j*rowMemory + (i >> (4 - ceilLog2b16_t(bitsPerPixel)))];
+
+            value = (((0xFF >> (8 - bitsPerPixel)) 
+                << (4 - ceilLog2b16_t(bitsPerPixel))) & value);
+
+            value = value >> (4 - ceilLog2b16_t(bitsPerPixel));
+
+            colorUsed[value] = 1;
+        }
+    }
+
+    return BITMAPWAG_SUCCESS;
 }
 
 const char * ErrorsToStringBitmapWag(const BitmapWagError error)
@@ -131,6 +198,9 @@ const char * ErrorsToStringBitmapWag(const BitmapWagError error)
             return "bitmap color palette portion of file not read";
         case BITMAPWAG_BITMAPBITS_NOT_READ:
             return "bitmap image portion of file not read";
+        case BITMAPWAG_COLORUSED_FAILED_TO_ALLOCATE:
+            return "failed to allocate internal colorUsed array, perfomance \
+                will be degraded";
         default: 
             return "unknown error"; 
     }
@@ -140,6 +210,7 @@ BitmapWagError ReadBitmapWag(BitmapWagImg * bm, const char * filePath)
 {
     FILE *fp;
     size_t itemsRead;
+    BitmapWagError retVal = BITMAPWAG_SUCCESS;
 
     // Check for null pointers before anything is done in this function.
     if(bm == NULL) 
@@ -155,6 +226,7 @@ BitmapWagError ReadBitmapWag(BitmapWagImg * bm, const char * filePath)
     bm->bmfh = (BitmapWagBmfh){0};
     bm->aColors = NULL;
     bm->aBitmapBits = NULL;
+    bm->colorUsed = NULL;
 
     // open filePath as binary file for writing 
     fp = fopen(filePath, "rb");
@@ -199,16 +271,20 @@ BitmapWagError ReadBitmapWag(BitmapWagImg * bm, const char * filePath)
     if(bm->bmih.biBitCount <= 8)
     {
         size_t sizeOfPalette;
+        size_t sizeOfColorUsed;
+        size_t numColors;
         if(bm->bmih.biClrUsed > 0)
         {
-            sizeOfPalette = bm->bmih.biClrUsed * sizeof(BitmapWagRgbQuad);
+            numColors = bm->bmih.biClrUsed;
         }
         else
         {
             // Calculate number of colors based on biBitCount
-            size_t numColors = 1 << bm->bmih.biBitCount;
-            sizeOfPalette = numColors * sizeof(BitmapWagRgbQuad);
+            numColors = 1 << bm->bmih.biBitCount;    
         }
+        // Calculate size of arrays to allocate 
+        sizeOfPalette = numColors * sizeof(BitmapWagRgbQuad);
+        sizeOfColorUsed = numColors * sizeof(uint8_t);
 
         bm->aColors = (BitmapWagRgbQuad *) malloc(sizeOfPalette);
 
@@ -224,6 +300,25 @@ BitmapWagError ReadBitmapWag(BitmapWagImg * bm, const char * filePath)
         {
             fclose(fp);
             return BITMAPWAG_ACOLORS_NOT_READ;
+        }
+
+        // Allocate the space for the colorUsed record
+        bm->colorUsed = (uint8_t *) malloc(sizeOfColorUsed);
+
+        // if colorUsed failed to allocate, it's not an error, and there are 
+        // fallbacks but it will really  slow down the performance of the 
+        // library so the application should be notified 
+        if(bm->colorUsed == NULL)
+        {
+            retVal = BITMAPWAG_COLORUSED_FAILED_TO_ALLOCATE;
+        }
+        else
+        {
+            // Initialize all values in colorUsed to be all zeros
+            for(size_t i = 0; i < numColors; i++)
+            {
+                (bm->colorUsed)[i] = 0;
+            }
         }
     }
     else
@@ -242,6 +337,7 @@ BitmapWagError ReadBitmapWag(BitmapWagImg * bm, const char * filePath)
         return BITMAPWAG_ALLOCATE_BITMAP_BITS_FAILED;
     }
 
+    // Read the image into memory 
     itemsRead = fread(bm->aBitmapBits, bytesForImage, 1, fp);
 
     if(itemsRead != 1)
@@ -253,8 +349,16 @@ BitmapWagError ReadBitmapWag(BitmapWagImg * bm, const char * filePath)
     //close the file
     fclose(fp);
 
+    // Initialize color used array
+    if(bm->bmih.biBitCount <= 8 && bm->colorUsed != NULL)
+    {
+        SetColorUsedArrayBitmapWag(bm, bm->colorUsed);
+        // NOTE: We don't look at error values because none of them are valid
+        // for this function in this usage. 
+    }
+
     // Return successful 
-    return BITMAPWAG_SUCCESS;
+    return retVal;
 }
 
 BitmapWagError WriteBitmapWag(const BitmapWagImg * bm, const char * filePath)
@@ -366,12 +470,15 @@ BitmapWagError InitializeBitmapWag(BitmapWagImg * bm, const uint32_t height,
 {
     // Contains the size of the palette array 
     size_t sizeOfPalette = 0; 
+    BitmapWagError retVal = BITMAPWAG_SUCCESS;
 
     // Null check on bitmap pointer
     if(bm == NULL)
     {
         return BITMAPWAG_NULL;
     }
+
+    bm->colorUsed = NULL;
 
     // Find the amount of memory that needs to be allocated for the image array
     size_t rowMemory = GetRowMemory(width, bitsPerPixel);
@@ -394,10 +501,12 @@ BitmapWagError InitializeBitmapWag(BitmapWagImg * bm, const uint32_t height,
     }
 
     // Allocate memory for the color palette if one is needed 
+    // And allocate memory for the colorsUsed array if one is needed
     if(bitsPerPixel <= 8)
     {
         // Calculate number of colors based on biBitCount
         size_t numColors = 1 << bitsPerPixel;
+        size_t sizeOfColorUsed = numColors * sizeof(uint8_t);
         sizeOfPalette = numColors * sizeof(BitmapWagRgbQuad);
 
         bm->aColors = (BitmapWagRgbQuad *) malloc(sizeOfPalette);
@@ -414,11 +523,31 @@ BitmapWagError InitializeBitmapWag(BitmapWagImg * bm, const uint32_t height,
         {
             (bm->aColors)[i] = (BitmapWagRgbQuad){0x00, 0x00, 0x00, 0};
         }
+
+        // Allocate the space for the colorUsed record
+        bm->colorUsed = (uint8_t *) malloc(sizeOfColorUsed);
+
+        // if colorUsed failed to allocate, it's not an error, and there are 
+        // fallbacks but it will really  slow down the performance of the 
+        // library so the application should be notified 
+        if(bm->colorUsed == NULL)
+        {
+            retVal = BITMAPWAG_COLORUSED_FAILED_TO_ALLOCATE;
+        }
+        else
+        {
+            // Initialize all values in colorUsed to be all zeros
+            for(size_t i = 0; i < numColors; i++)
+            {
+                (bm->colorUsed)[i] = 0;
+            }
+        }
     }
     else
     {
         bm->bmih.biClrUsed = 0;
         bm->aColors = NULL;
+        bm->colorUsed = NULL;
     }
 
     // Now that everything has been allocated, start initializing all the 
@@ -450,7 +579,7 @@ BitmapWagError InitializeBitmapWag(BitmapWagImg * bm, const uint32_t height,
 
     bm->bmih.biClrImportant = 0;
 
-    return BITMAPWAG_SUCCESS;
+    return retVal;
 }
 
 BitmapWagError FreeBitmapWag(BitmapWagImg * bm)
@@ -470,6 +599,12 @@ BitmapWagError FreeBitmapWag(BitmapWagImg * bm)
     {
         free(bm->aColors);
         bm->aColors = NULL;
+    }
+
+    if(bm->colorUsed != NULL)
+    {
+        free(bm->colorUsed);
+        bm->colorUsed = NULL;
     }
 
     return BITMAPWAG_SUCCESS; 
@@ -499,58 +634,6 @@ uint32_t GetBitmapWagWidth(const BitmapWagImg * bm)
     }
 }
 
-BitmapWagError SetColorUsedArrayBitmapWag(BitmapWagImg * bm, 
-    uint8_t * colorUsed)
-{
-    size_t bitsPerPixel = bm->bmih.biBitCount;
-    size_t width = bm->bmih.biWidth;
-    size_t height = bm->bmih.biHeight;
-
-    // Find the amount of memory that needs to be allocated for the image array
-    size_t rowMemory = GetRowMemory(width, bitsPerPixel);
-
-    // Null check on bitmap pointer
-    if(bm == NULL)
-    {
-        return BITMAPWAG_NULL;
-    }
-    if(colorUsed == NULL)
-    {
-        return BITMAPWAG_COLOR_ARRAY_NULL;
-    }
-    // Check to on the bitmap bits pointer
-    if(bm->aBitmapBits == NULL)
-    {
-        return BITMAPWAG_BITMAPBITS_NULL;
-    }
-
-    // If a color palette is not being used 
-    if(bm->bmih.biBitCount > 8)
-    {
-        return BITMAPWAG_NO_COLOR_PALETTE; 
-    }
-
-    // Set the index, each pixel contains, to one in the colorUsed array 
-    for(uint32_t i = 0; i < width; i++)
-    {
-        for(uint32_t j = 0; j < height; j++)
-        {
-            uint8_t value = 
-            (bm->aBitmapBits)
-            [j*rowMemory + (i >> (4 - ceilLog2b16_t(bitsPerPixel)))];
-
-            value = (((0xFF >> (8 - bitsPerPixel)) 
-                << (4 - ceilLog2b16_t(bitsPerPixel))) & value);
-
-            value = value >> (4 - ceilLog2b16_t(bitsPerPixel));
-
-            colorUsed[value] = 1;
-        }
-    }
-
-    return BITMAPWAG_SUCCESS;
-}
-
 /**
  * compares color a to color b for equivalance
  *
@@ -565,10 +648,11 @@ uint32_t CompareColors(BitmapWagRgbQuad a, BitmapWagRgbQuad b)
 }
 
 BitmapWagError SetBitmapWagPixel(BitmapWagImg * bm, const uint32_t x, 
-    const uint32_t y, const uint8_t r, const uint8_t g, const uint8_t b,
-    uint8_t * colorUsed)
+    const uint32_t y, const uint8_t r, const uint8_t g, const uint8_t b)
 {
     // colorUsedInt keeps track of which indicies in a color palette are in use
+    // Use a stack allocated array because it's relatively small and it's 
+    // much faster than dynamic allocations 
     uint8_t colorUsedInt [256] = {0};
     uint16_t possibleColors;
 
@@ -629,14 +713,14 @@ BitmapWagError SetBitmapWagPixel(BitmapWagImg * bm, const uint32_t x,
         // Populate the contents of the colorUsed array
 
         uint8_t * colorUsedPtr;
-        if(colorUsed == NULL)
+        if(bm->colorUsed == NULL)
         {
-            SetColorUsedArrayBitmapWag(bm, colorUsedInt);
             colorUsedPtr = colorUsedInt;
+            SetColorUsedArrayBitmapWag(bm, colorUsedPtr);
         }
         else
         {
-            colorUsedPtr = colorUsed;
+            colorUsedPtr = bm->colorUsed;
         }
 
         // Find the index of the color specified in the input
@@ -655,35 +739,18 @@ BitmapWagError SetBitmapWagPixel(BitmapWagImg * bm, const uint32_t x,
         // If the color is not yet in the palette, find a new place for it
         if(colorNotFound)
         {
-            // Reset colorNotFound to 1 because now it will be used to indicate
+            // Ensure colorNotFound is 1 because now it will be used to indicate
             // if there is no space left in the color palette 
             colorNotFound = 1;
 
             // Find the index of the color specified in the input
             for(uint16_t i = 0; i < possibleColors; i++)
             {
-                if(colorUsed == NULL)
-                {
-                    if(!colorUsedInt[i])
-                    {
-                        colorUsedInt[i] = 1;
-                        colorNotFound = 0;
-                        (bm->aColors)[i] = color;
-                        indexOfColor = i;
-                        break;
-                    }
-                }
-                else
-                {
-                    if(!colorUsed[i])
-                    {
-                        colorUsed[i] = 1;
-                        colorNotFound = 0;
-                        (bm->aColors)[i] = color;
-                        indexOfColor = i;
-                        break;
-                    }
-                }
+                colorUsedInt[i] = 1;
+                colorNotFound = 0;
+                (bm->aColors)[i] = color;
+                indexOfColor = i;
+                break;
             }
 
             // If there was no space left in the palette 

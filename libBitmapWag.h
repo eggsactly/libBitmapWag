@@ -47,7 +47,8 @@ typedef enum {
     BITMAPWAG_BMFH_NOT_READ,
     BITMAPWAG_BMIH_NOT_READ,
     BITMAPWAG_ACOLORS_NOT_READ,
-    BITMAPWAG_BITMAPBITS_NOT_READ
+    BITMAPWAG_BITMAPBITS_NOT_READ,
+    BITMAPWAG_COLORUSED_FAILED_TO_ALLOCATE
 } BitmapWagError;
 
 // Bitmap file header
@@ -123,6 +124,10 @@ typedef struct {
     BitmapWagRgbQuad * aColors;
     // image bits
     uint8_t * aBitmapBits;
+    // colorUsed will be used by the bitmap array to keep track of how many 
+    // colors in the pallet are being used when writing to pixels for 
+    // efficiencies sake. 
+    uint8_t * colorUsed;
 } BitmapWagImg; 
 
 /**
@@ -221,22 +226,7 @@ uint32_t GetBitmapWagWidth(const BitmapWagImg * bm);
  * @return BITMAPWAG_SUCCESS if successful
  */
 BitmapWagError SetBitmapWagPixel(BitmapWagImg * bm, const uint32_t x, 
-    const uint32_t y, const uint8_t r, const uint8_t g, const uint8_t b, 
-    uint8_t * colorUsed);
-
-/**
- * SetColorUsedArrayBitmapWag populates the 256 bit array colorUsed. 
- * This speeds up the function SetBitmapWagPixel when color palettes are used 
- * because the 256 byte array would need to be reconstructed each call 
- * otherwise. 
- *
- * @param bm pointer to a bitmap struct
- * @param colorUsed pointer to a 256 byte array for keeping track of which 
- *        colors in the color palette have been used. 
- * @return BITMAPWAG_SUCCESS if successful
- */
-BitmapWagError SetColorUsedArrayBitmapWag(BitmapWagImg * bm, 
-    uint8_t * colorUsed);
+    const uint32_t y, const uint8_t r, const uint8_t g, const uint8_t b);
 
 /**
  * GetBitmapWagPixel gets the color value at a coordinate on the image
