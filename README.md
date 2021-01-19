@@ -35,7 +35,7 @@ directories into the /usr/local/ directory, run:
 make install
 ```
 
-After installation you will need to make sure that /usr/local/lib is in you
+After installation you will need to make sure that /usr/local/lib is in your
 LD\_LIBRARY\_PATH so that the dynamic linker can find the library when you 
 run code that links to it. 
 ```

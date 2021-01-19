@@ -27,7 +27,8 @@ EXE:=bitmap
 # name of the libary
 LIBNAME:=libBitmapWag
 
-# This make file will build every file it see in the directory ending with a .c
+# This make file will build every file it sees in the directory ending with a 
+# .c
 SRC_EXTENSION:=c
 # Build process creates the folders obj, lib and inc for the .o, .so and .h 
 # files respectively 

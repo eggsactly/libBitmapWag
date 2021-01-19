@@ -117,7 +117,7 @@ static BitmapWagError SetColorUsedArrayBitmapWag(BitmapWagImg * bm,
     {
         return BITMAPWAG_COLOR_ARRAY_NULL;
     }
-    // Check to on the bitmap bits pointer
+    // Check if the bitmap bits pointer is null
     if(bm->aBitmapBits == NULL)
     {
         return BITMAPWAG_BITMAPBITS_NULL;
@@ -635,7 +635,7 @@ uint32_t GetBitmapWagWidth(const BitmapWagImg * bm)
 }
 
 /**
- * compares color a to color b for equivalance
+ * compares color a to color b for equivalence
  *
  * @param a first color to compare
  * @param b second color to compare
