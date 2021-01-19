@@ -11,6 +11,9 @@ www.fortunecity.com/skyscraper/windows/364/bmpffrmt.htm
 This library is meant to have simple dependencies, it relies only on the 
 standard c libraries stdio.h, stdlib.h, and inttypes.h. 
 
+This library has been tested on x86 and has not been tested on ARM or any other
+Big Endian architecture. 
+
 # Building
 Build process was designed for Linux and gcc. 
 
