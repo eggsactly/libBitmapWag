@@ -25,7 +25,7 @@ const unsigned int MajorVersionBitmapWag(void)
 
 const unsigned int MinorVersionBitmapWag(void)
 {
-    return 0;
+    return 1;
 }
 
 const unsigned int PatchVersionBitmapWag(void)
