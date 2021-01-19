@@ -41,7 +41,7 @@ const unsigned int PatchVersionBitmapWag(void)
  * @param input the value to take the log of
  * @return ceil(log2(input)) 
  */
-uint16_t ceilLog2b16_t (const uint16_t input)
+static uint16_t ceilLog2b16_t (const uint16_t input)
 {
     uint16_t highestBitPosition = 0;
     uint16_t numOneBits = 0;
@@ -72,7 +72,7 @@ uint16_t ceilLog2b16_t (const uint16_t input)
  * @param bitsPerPixel of each pixel
  * @return the amount of memory that needs to be allocated for each row
  */
-uint32_t GetRowMemory(uint32_t width, uint16_t bitsPerPixel)
+static uint32_t GetRowMemory(uint32_t width, uint16_t bitsPerPixel)
 {
     uint32_t rowMemory = ((bitsPerPixel < 8) 
         * (width >> (4 - ceilLog2b16_t(bitsPerPixel)))) 
@@ -98,7 +98,7 @@ uint32_t GetRowMemory(uint32_t width, uint16_t bitsPerPixel)
  *        colors in the color palette have been used. 
  * @return BITMAPWAG_SUCCESS if successful
  */
-BitmapWagError SetColorUsedArrayBitmapWag(BitmapWagImg * bm, 
+static BitmapWagError SetColorUsedArrayBitmapWag(BitmapWagImg * bm, 
     uint8_t * colorUsed)
 {
     size_t bitsPerPixel = bm->bmih.biBitCount;
