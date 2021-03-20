@@ -15,7 +15,7 @@
 
 #include <stdio.h>
 
-#include "libBitmapWag.h"
+#include "BitmapWag.h"
 
 // APP_NAME is used for stderr outputs in this program
 // it should be provided by the makefile, if not, it is redfined here. 
