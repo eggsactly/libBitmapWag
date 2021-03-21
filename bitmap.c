@@ -27,7 +27,7 @@
 int main()
 {
     // Declare two bitmap image structs, img for writing, img2 for reading 
-    BitmapWagImg img, img2;
+    BitmapWagImg *img, *img2;
 
     // BitmapWagError is an enum containing error codes
     BitmapWagError error;
@@ -48,6 +48,7 @@ int main()
 
     // Initialize a new bitmap
     error = InitializeBitmapWag(&img, height, width, bitsPerPixel);
+
     if(error)
     {
         fprintf(stderr, "%s: error: InitializeBitmapWag: %s.\n", APP_NAME, 
@@ -90,7 +91,6 @@ int main()
             ErrorsToStringBitmapWag(error));
         return -1;
     }
-
 
     // Try reading the bitmap that was just written
     error = ReadBitmapWag(&img2, outputFile);

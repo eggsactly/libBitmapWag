@@ -48,58 +48,11 @@ typedef enum {
     BITMAPWAG_BMIH_NOT_READ,
     BITMAPWAG_ACOLORS_NOT_READ,
     BITMAPWAG_BITMAPBITS_NOT_READ,
-    BITMAPWAG_COLORUSED_FAILED_TO_ALLOCATE
+    BITMAPWAG_COLORUSED_FAILED_TO_ALLOCATE,
+    BITMAPWAG_PTRNULL
 } BitmapWagError;
 
-// Bitmap file header
-typedef struct __attribute__((__packed__)) {
-    // Always set to 'BM' to declare that this is a .bmp file
-    uint16_t bfType; 
-    // Size of file in bytes 
-    uint32_t bfSize;  
-    // always set to zero
-    uint16_t bfReserved1; 
-    // always set to zero
-    uint16_t bfReserved2; 
-    // specifies the offset from the beginning of the file to the bitmap data
-    uint32_t bfOffBits;  
-} BitmapWagBmfh;
-
-// Bitmap info header 
-typedef struct __attribute__((__packed__)) {
-    // biSize specifies the size of the BITMAPINFORHEADER structure in btyes
-    uint32_t biSize; 
-    // biWidth specifies the width of the image in pixels
-    uint32_t biWidth;
-    // biHeight specifies the height of the image in pixels
-    uint32_t biHeight;
-    // specifies the number of planes of the target device, set to zero
-    uint16_t biPlanes;
-    // biBitCount specifies the number of bits per pixel, actually used to 
-    // specify the color resolution of the bitmap:
-    // 1: black/white
-    // 4: 16-colors
-    // 8: 256-colors
-    // 24: 16.7 million colors
-    uint16_t biBitCount;
-    // biCompression specifies the type of compression, set to zero
-    uint32_t biCompression;
-    // biSizeImage specifies the size of the image data in bytes, if no 
-    // compresion, set to zero
-    uint32_t biSizeImage;
-    // biXPelsPerMeter specifies the horizontal pixels per meter on the target 
-    // device
-    uint32_t biXPelsPerMeter;
-    // biYPelsPerMeter specifies the vertical pixels per meter on the target 
-    // device
-    uint32_t biYPelsPerMeter;
-    // biClrUsed specifies the number of colors used in the bitmap, if zero, 
-    // num colors is calculated using biBitCount
-    uint32_t biClrUsed;
-    // biClrImportant specifies the number of colors that are important for the 
-    // bitmap, if set to zero all colors are important. 
-    uint32_t biClrImportant;
-} BitmapWagBmih;
+typedef struct BitmapWagImg BitmapWagImg;
 
 // Red Green Blue quad struct
 // Does not need to be packed because members are all of the same type
@@ -113,22 +66,6 @@ typedef struct {
     // must always be set to zero
     uint8_t rgbReserved; 
 } BitmapWagRgbQuad; 
-
-// Struct containing all the Bitmap structures 
-typedef struct {
-    // Bitmap file header
-    BitmapWagBmfh bmfh;
-    // Bitmap info header 
-    BitmapWagBmih bmih;
-    // Color 'palette'
-    BitmapWagRgbQuad * aColors;
-    // image bits
-    uint8_t * aBitmapBits;
-    // colorUsed will be used by the bitmap array to keep track of how many 
-    // colors in the pallet are being used when writing to pixels for 
-    // efficiencies sake. 
-    uint8_t * colorUsed;
-} BitmapWagImg; 
 
 /**
  *  MajorVersionBitmapWag returns the major version number of the library
@@ -165,7 +102,7 @@ const char * ErrorsToStringBitmapWag(const BitmapWagError error);
  * @param filePath path to write the file to, relative or absolute.
  * @return BITMAPWAG_SUCCESS if successful  
  */
-BitmapWagError WriteBitmapWag(const BitmapWagImg * bm, const char * filePath);
+BitmapWagError WriteBitmapWag(BitmapWagImg ** const bm, const char * filePath);
 
 /**
  * ReadBitmapWag reads a bitmap image file
@@ -176,7 +113,7 @@ BitmapWagError WriteBitmapWag(const BitmapWagImg * bm, const char * filePath);
  * @note InitializeBitmapWag should not be called before this and could cause
  *       memory leaks if it is. 
  */
-BitmapWagError ReadBitmapWag(BitmapWagImg * bm, const char * filePath);
+BitmapWagError ReadBitmapWag(BitmapWagImg ** bm, const char * filePath);
 
 /**
  * InitializeBitmapWag creates a bitmap file 
@@ -187,7 +124,7 @@ BitmapWagError ReadBitmapWag(BitmapWagImg * bm, const char * filePath);
  * @param number of bits per pixel
  * @return BITMAPWAG_SUCCESS if successful
  */
-BitmapWagError InitializeBitmapWag(BitmapWagImg * bm, const uint32_t height, 
+BitmapWagError InitializeBitmapWag(BitmapWagImg ** bm, const uint32_t height, 
     const uint32_t width, const uint16_t bitsPerPixel);
 
 /**
@@ -196,7 +133,7 @@ BitmapWagError InitializeBitmapWag(BitmapWagImg * bm, const uint32_t height,
  * @param bm bitmap pointer
  * @return BITMAPWAG_SUCCESS if successful
  */
-BitmapWagError FreeBitmapWag(BitmapWagImg * bm);
+BitmapWagError FreeBitmapWag(BitmapWagImg ** bm);
 
 /**
  * GetBitmapHeightWag gets the height of the bitmap
@@ -204,7 +141,7 @@ BitmapWagError FreeBitmapWag(BitmapWagImg * bm);
  * @param bm bitmap image
  * @return height of bitmap image
  */
-uint32_t GetBitmapWagHeight(const BitmapWagImg * bm);
+uint32_t GetBitmapWagHeight(BitmapWagImg ** const bm);
 
 /**
  * GetBitmapWagWidth gets the height of the bitmap
@@ -212,7 +149,7 @@ uint32_t GetBitmapWagHeight(const BitmapWagImg * bm);
  * @param bm bitmap image
  * @return width of bitmap image
  */
-uint32_t GetBitmapWagWidth(const BitmapWagImg * bm);
+uint32_t GetBitmapWagWidth(BitmapWagImg ** const bm);
 
 /**
  * SetBitmapWagPixel sets a pixel on the bitmap to the specified color
@@ -225,7 +162,7 @@ uint32_t GetBitmapWagWidth(const BitmapWagImg * bm);
  * @param b blue component 
  * @return BITMAPWAG_SUCCESS if successful
  */
-BitmapWagError SetBitmapWagPixel(BitmapWagImg * bm, const uint32_t x, 
+BitmapWagError SetBitmapWagPixel(BitmapWagImg ** bm, const uint32_t x, 
     const uint32_t y, const uint8_t r, const uint8_t g, const uint8_t b);
 
 /**
@@ -237,7 +174,7 @@ BitmapWagError SetBitmapWagPixel(BitmapWagImg * bm, const uint32_t x,
  * @param color pointer to the color value to populate
  * @return BITMAPWAG_SUCCESS if successful
  */
-BitmapWagError GetBitmapWagPixel(const BitmapWagImg * bm, 
+BitmapWagError GetBitmapWagPixel(BitmapWagImg ** const bm, 
     const uint32_t x, const uint32_t y, BitmapWagRgbQuad * color);
 
 // Added to make library compatible with C and C++. 

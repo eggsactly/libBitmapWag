@@ -17,6 +17,72 @@
 #include <stdlib.h>
 #include "BitmapWag.h"
 
+// Bitmap file header
+typedef struct __attribute__((__packed__)) {
+    // Always set to 'BM' to declare that this is a .bmp file
+    uint16_t bfType; 
+    // Size of file in bytes 
+    uint32_t bfSize;  
+    // always set to zero
+    uint16_t bfReserved1; 
+    // always set to zero
+    uint16_t bfReserved2; 
+    // specifies the offset from the beginning of the file to the bitmap data
+    uint32_t bfOffBits;  
+} BitmapWagBmfh;
+
+// Bitmap info header 
+typedef struct __attribute__((__packed__)) {
+    // biSize specifies the size of the BITMAPINFORHEADER structure in btyes
+    uint32_t biSize; 
+    // biWidth specifies the width of the image in pixels
+    uint32_t biWidth;
+    // biHeight specifies the height of the image in pixels
+    uint32_t biHeight;
+    // specifies the number of planes of the target device, set to zero
+    uint16_t biPlanes;
+    // biBitCount specifies the number of bits per pixel, actually used to 
+    // specify the color resolution of the bitmap:
+    // 1: black/white
+    // 4: 16-colors
+    // 8: 256-colors
+    // 24: 16.7 million colors
+    uint16_t biBitCount;
+    // biCompression specifies the type of compression, set to zero
+    uint32_t biCompression;
+    // biSizeImage specifies the size of the image data in bytes, if no 
+    // compresion, set to zero
+    uint32_t biSizeImage;
+    // biXPelsPerMeter specifies the horizontal pixels per meter on the target 
+    // device
+    uint32_t biXPelsPerMeter;
+    // biYPelsPerMeter specifies the vertical pixels per meter on the target 
+    // device
+    uint32_t biYPelsPerMeter;
+    // biClrUsed specifies the number of colors used in the bitmap, if zero, 
+    // num colors is calculated using biBitCount
+    uint32_t biClrUsed;
+    // biClrImportant specifies the number of colors that are important for the 
+    // bitmap, if set to zero all colors are important. 
+    uint32_t biClrImportant;
+} BitmapWagBmih;
+
+// Struct containing all the Bitmap structures 
+struct BitmapWagImg {
+    // Bitmap file header
+    BitmapWagBmfh bmfh;
+    // Bitmap info header 
+    BitmapWagBmih bmih;
+    // Color 'palette'
+    BitmapWagRgbQuad * aColors;
+    // image bits
+    uint8_t * aBitmapBits;
+    // colorUsed will be used by the bitmap array to keep track of how many 
+    // colors in the pallet are being used when writing to pixels for 
+    // efficiencies sake. 
+    uint8_t * colorUsed;
+}; 
+
 //
 const unsigned int MajorVersionBitmapWag(void)
 {
@@ -98,9 +164,22 @@ static uint32_t GetRowMemory(uint32_t width, uint16_t bitsPerPixel)
  *        colors in the color palette have been used. 
  * @return BITMAPWAG_SUCCESS if successful
  */
-static BitmapWagError SetColorUsedArrayBitmapWag(BitmapWagImg * bm, 
+static BitmapWagError SetColorUsedArrayBitmapWag(BitmapWagImg ** bmptr, 
     uint8_t * colorUsed)
 {
+    // Null check on bitmap pointer
+    if(bmptr == NULL)
+    {
+        return BITMAPWAG_PTRNULL;
+    }
+
+    BitmapWagImg * bm = *bmptr;
+
+    if(bm == NULL)
+    {
+        return BITMAPWAG_NULL;
+    }
+
     size_t bitsPerPixel = bm->bmih.biBitCount;
     size_t width = bm->bmih.biWidth;
     size_t height = bm->bmih.biHeight;
@@ -108,11 +187,7 @@ static BitmapWagError SetColorUsedArrayBitmapWag(BitmapWagImg * bm,
     // Find the amount of memory that needs to be allocated for the image array
     size_t rowMemory = GetRowMemory(width, bitsPerPixel);
 
-    // Null check on bitmap pointer
-    if(bm == NULL)
-    {
-        return BITMAPWAG_NULL;
-    }
+    
     if(colorUsed == NULL)
     {
         return BITMAPWAG_COLOR_ARRAY_NULL;
@@ -201,22 +276,34 @@ const char * ErrorsToStringBitmapWag(const BitmapWagError error)
         case BITMAPWAG_COLORUSED_FAILED_TO_ALLOCATE:
             return "failed to allocate internal colorUsed array, perfomance \
                 will be degraded";
+        case BITMAPWAG_PTRNULL:
+            return "bitmap pointer null";
         default: 
             return "unknown error"; 
     }
 }
 
-BitmapWagError ReadBitmapWag(BitmapWagImg * bm, const char * filePath)
+BitmapWagError ReadBitmapWag(BitmapWagImg ** bmptr, const char * filePath)
 {
     FILE *fp;
     size_t itemsRead;
     BitmapWagError retVal = BITMAPWAG_SUCCESS;
+    BitmapWagImg * bm;
 
-    // Check for null pointers before anything is done in this function.
-    if(bm == NULL) 
+    // Null check on bitmap pointer
+    if(bmptr == NULL)
+    {
+        return BITMAPWAG_PTRNULL;
+    }
+
+    *bmptr = (BitmapWagImg *) malloc(sizeof(BitmapWagImg));
+    bm = *bmptr;
+
+    if(bm == NULL)
     {
         return BITMAPWAG_NULL;
     }
+
     if (filePath == NULL)
     {
         return BITMAPWAG_FILE_PATH_NULL;
@@ -352,7 +439,7 @@ BitmapWagError ReadBitmapWag(BitmapWagImg * bm, const char * filePath)
     // Initialize color used array
     if(bm->bmih.biBitCount <= 8 && bm->colorUsed != NULL)
     {
-        SetColorUsedArrayBitmapWag(bm, bm->colorUsed);
+        SetColorUsedArrayBitmapWag(bmptr, bm->colorUsed);
         // NOTE: We don't look at error values because none of them are valid
         // for this function in this usage. 
     }
@@ -361,11 +448,20 @@ BitmapWagError ReadBitmapWag(BitmapWagImg * bm, const char * filePath)
     return retVal;
 }
 
-BitmapWagError WriteBitmapWag(const BitmapWagImg * bm, const char * filePath)
+BitmapWagError WriteBitmapWag(BitmapWagImg ** const bmptr, 
+    const char * filePath)
 {
     // Pointer to the file
     FILE *fp;
     size_t itemsWritten;
+
+    // Null check on bitmap pointer
+    if(bmptr == NULL)
+    {
+        return BITMAPWAG_PTRNULL;
+    }
+
+    const BitmapWagImg * bm = *bmptr;
 
     // Check for null pointers before anything is done in this function.
     if(bm == NULL) 
@@ -465,12 +561,23 @@ BitmapWagError WriteBitmapWag(const BitmapWagImg * bm, const char * filePath)
     return BITMAPWAG_SUCCESS;
 }
 
-BitmapWagError InitializeBitmapWag(BitmapWagImg * bm, const uint32_t height, 
+BitmapWagError InitializeBitmapWag(BitmapWagImg ** bmptr, const uint32_t height, 
     const uint32_t width, const uint16_t bitsPerPixel)
 {
     // Contains the size of the palette array 
     size_t sizeOfPalette = 0; 
     BitmapWagError retVal = BITMAPWAG_SUCCESS;
+    BitmapWagImg * bm;
+
+    // Null check on bitmap pointer
+    if(bmptr == NULL)
+    {
+        return BITMAPWAG_PTRNULL;
+    }
+
+    // Allocate memory for bm 
+    *bmptr = (BitmapWagImg *) malloc(sizeof(BitmapWagImg));
+    bm = *bmptr;
 
     // Null check on bitmap pointer
     if(bm == NULL)
@@ -582,8 +689,16 @@ BitmapWagError InitializeBitmapWag(BitmapWagImg * bm, const uint32_t height,
     return retVal;
 }
 
-BitmapWagError FreeBitmapWag(BitmapWagImg * bm)
+BitmapWagError FreeBitmapWag(BitmapWagImg ** bmptr)
 {
+    // Null check on bitmap pointer
+    if(bmptr == NULL)
+    {
+        return BITMAPWAG_PTRNULL;
+    }
+
+    BitmapWagImg * bm = *bmptr;
+
     if(bm == NULL)
     {
         return BITMAPWAG_NULL;
@@ -607,11 +722,21 @@ BitmapWagError FreeBitmapWag(BitmapWagImg * bm)
         bm->colorUsed = NULL;
     }
 
+    free(bm);
+    bm = NULL;
+
     return BITMAPWAG_SUCCESS; 
 }
 
-uint32_t GetBitmapWagHeight(const BitmapWagImg * bm)
+uint32_t GetBitmapWagHeight(BitmapWagImg ** const bmptr)
 {
+    // Null check on bitmap pointer
+    if(bmptr == NULL)
+    {
+        return BITMAPWAG_PTRNULL;
+    }
+
+    BitmapWagImg * bm = *bmptr;
     if(bm == NULL)
     {   
         return 0;
@@ -622,8 +747,15 @@ uint32_t GetBitmapWagHeight(const BitmapWagImg * bm)
     }
 }
 
-uint32_t GetBitmapWagWidth(const BitmapWagImg * bm)
+uint32_t GetBitmapWagWidth(BitmapWagImg ** const bmptr)
 {
+    // Null check on bitmap pointer
+    if(bmptr == NULL)
+    {
+        return BITMAPWAG_PTRNULL;
+    }
+
+    BitmapWagImg * bm = *bmptr;
     if(bm == NULL)
     {   
         return 0;
@@ -647,7 +779,7 @@ uint32_t CompareColors(BitmapWagRgbQuad a, BitmapWagRgbQuad b)
         && (a.rgbRed == b.rgbRed) && (a.rgbReserved == b.rgbReserved);
 }
 
-BitmapWagError SetBitmapWagPixel(BitmapWagImg * bm, const uint32_t x, 
+BitmapWagError SetBitmapWagPixel(BitmapWagImg ** bmptr, const uint32_t x, 
     const uint32_t y, const uint8_t r, const uint8_t g, const uint8_t b)
 {
     // colorUsedInt keeps track of which indicies in a color palette are in use
@@ -655,6 +787,14 @@ BitmapWagError SetBitmapWagPixel(BitmapWagImg * bm, const uint32_t x,
     // much faster than dynamic allocations 
     uint8_t colorUsedInt [256] = {0};
     uint16_t possibleColors;
+
+    // Null check on bitmap pointer
+    if(bmptr == NULL)
+    {
+        return BITMAPWAG_PTRNULL;
+    }
+
+    BitmapWagImg * bm = *bmptr;
 
     // Null check on bitmap pointer
     if(bm == NULL)
@@ -716,7 +856,7 @@ BitmapWagError SetBitmapWagPixel(BitmapWagImg * bm, const uint32_t x,
         if(bm->colorUsed == NULL)
         {
             colorUsedPtr = colorUsedInt;
-            SetColorUsedArrayBitmapWag(bm, colorUsedPtr);
+            SetColorUsedArrayBitmapWag(bmptr, colorUsedPtr);
         }
         else
         {
@@ -806,6 +946,8 @@ BitmapWagError SetBitmapWagPixel(BitmapWagImg * bm, const uint32_t x,
 
     else
     {
+        //TODO: Remove
+        printf("bm->bmih.biBitCount %d\n", bm->bmih.biBitCount);
         return BITMAPWAG_BIBITS_NOT_SUPPORTED;
     }
         
@@ -814,9 +956,17 @@ BitmapWagError SetBitmapWagPixel(BitmapWagImg * bm, const uint32_t x,
 }
 
 
-BitmapWagError GetBitmapWagPixel(const BitmapWagImg * bm, 
+BitmapWagError GetBitmapWagPixel(BitmapWagImg ** const bmptr, 
     const uint32_t x, const uint32_t y, BitmapWagRgbQuad * color)
 {
+    // Null check on bitmap pointer
+    if(bmptr == NULL)
+    {
+        return BITMAPWAG_PTRNULL;
+    }
+
+    const BitmapWagImg * bm = *bmptr;
+
     // Null check on bitmap pointer
     if(bm == NULL)
     {
