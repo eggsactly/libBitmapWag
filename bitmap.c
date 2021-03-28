@@ -46,8 +46,11 @@ int main()
             MajorVersionBitmapWag(), MinorVersionBitmapWag(), 
             PatchVersionBitmapWag());
 
+    // Construct the bitmap 
+    img = ConstructBitmapWag();
+
     // Initialize a new bitmap
-    error = InitializeBitmapWag(&img, height, width, bitsPerPixel);
+    error = InitializeBitmapWag(img, height, width, bitsPerPixel);
 
     if(error)
     {
@@ -61,7 +64,7 @@ int main()
     {
         for(unsigned j = 0; j < height; j++)
         {
-            error = SetBitmapWagPixel(&img, i, j, 
+            error = SetBitmapWagPixel(img, i, j, 
                 ((i+j) & 1) * 0xFF, ((i+j) & 1) * 0xFF, ((i+j) & 1) * 0xFF);
 
             if(error)
@@ -74,7 +77,7 @@ int main()
     }
 
     // Write the bitmap to the file 
-    error = WriteBitmapWag(&img, outputFile);
+    error = WriteBitmapWag(img, outputFile);
     if(error)
     {
         fprintf(stderr, "%s: error: WriteBitmapWag: %s.\n", APP_NAME, 
@@ -84,7 +87,9 @@ int main()
     fprintf(stderr, "%s: info: %s written.\n", APP_NAME, outputFile);
 
     // Unallocate memory tied to the bitmap 
-    error = FreeBitmapWag(&img);
+    error = FreeBitmapWag(img);
+    img = NULL; 
+
     if(error)
     {
         fprintf(stderr, "%s: error: FreeBitmapWag: %s.\n", APP_NAME, 
@@ -92,8 +97,11 @@ int main()
         return -1;
     }
 
+    // Construct the bitmap 
+    img2 = ConstructBitmapWag();
+
     // Try reading the bitmap that was just written
-    error = ReadBitmapWag(&img2, outputFile);
+    error = ReadBitmapWag(img2, outputFile);
     if(error)
     {
         fprintf(stderr, "%s: error: ReadBitmapWag: %s.\n", APP_NAME, 
@@ -106,10 +114,12 @@ int main()
 
     // Print bitmap information 
     fprintf(stderr, "%s: info: Bitmap dimensions: %dx%d\n", APP_NAME, 
-            GetBitmapWagWidth(&img2), GetBitmapWagHeight(&img2));
+            GetBitmapWagWidth(img2), GetBitmapWagHeight(img2));
 
     // Unallocate memory tied to the bitmap 
-    error = FreeBitmapWag(&img2);
+    error = FreeBitmapWag(img2);
+    img2 = NULL;
+
     if(error)
     {
         fprintf(stderr, "%s: error: FreeBitmapWag: %s.\n", APP_NAME, 

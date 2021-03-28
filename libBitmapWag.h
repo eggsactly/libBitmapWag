@@ -49,7 +49,10 @@ typedef enum {
     BITMAPWAG_ACOLORS_NOT_READ,
     BITMAPWAG_BITMAPBITS_NOT_READ,
     BITMAPWAG_COLORUSED_FAILED_TO_ALLOCATE,
-    BITMAPWAG_PTRNULL
+    BITMAPWAG_NOTCONSTRUCTED,
+    BITMAPWAG_ALREADY_INIT,
+    BITMAPWAG_NOSTATE,
+    BITMAPWAG_NOT_INIT
 } BitmapWagError;
 
 typedef struct BitmapWagImg BitmapWagImg;
@@ -96,13 +99,10 @@ const unsigned int PatchVersionBitmapWag(void);
 const char * ErrorsToStringBitmapWag(const BitmapWagError error);
 
 /**
- * WriteBitmapWag writes a bitmap image file
- *
- * @param bm pointer to a Bitmap_img struct
- * @param filePath path to write the file to, relative or absolute.
- * @return BITMAPWAG_SUCCESS if successful  
+ * @return an allocated pointer to a BitmapWagImg object. 
+ * @note Shall be called before any other function in this library. 
  */
-BitmapWagError WriteBitmapWag(BitmapWagImg ** const bm, const char * filePath);
+BitmapWagImg * ConstructBitmapWag(void);
 
 /**
  * ReadBitmapWag reads a bitmap image file
@@ -110,10 +110,10 @@ BitmapWagError WriteBitmapWag(BitmapWagImg ** const bm, const char * filePath);
  * @param bm pointer to a Bitmap_img struct
  * @param filePath path to read a file from, relative or absolute.
  * @return BITMAPWAG_SUCCESS if successful  
- * @note InitializeBitmapWag should not be called before this and could cause
- *       memory leaks if it is. 
+ * @note Shall be called after ConstructBitmapWag(). 
+ * @note If called after InitializeBitmapWag, memory leaks will occur. 
  */
-BitmapWagError ReadBitmapWag(BitmapWagImg ** bm, const char * filePath);
+BitmapWagError ReadBitmapWag(BitmapWagImg * bm, const char * filePath);
 
 /**
  * InitializeBitmapWag creates a bitmap file 
@@ -123,9 +123,20 @@ BitmapWagError ReadBitmapWag(BitmapWagImg ** bm, const char * filePath);
  * @param width of image
  * @param number of bits per pixel
  * @return BITMAPWAG_SUCCESS if successful
+ * @note Shall be called after ConstructBitmapWag(). 
+ * @note If called after ReadBitmapWag, memory leaks will occur. 
  */
-BitmapWagError InitializeBitmapWag(BitmapWagImg ** bm, const uint32_t height, 
+BitmapWagError InitializeBitmapWag(BitmapWagImg * bm, const uint32_t height, 
     const uint32_t width, const uint16_t bitsPerPixel);
+
+/**
+ * WriteBitmapWag writes a bitmap image file
+ *
+ * @param bm pointer to a Bitmap_img struct
+ * @param filePath path to write the file to, relative or absolute.
+ * @return BITMAPWAG_SUCCESS if successful  
+ */
+BitmapWagError WriteBitmapWag(const BitmapWagImg * bm, const char * filePath);
 
 /**
  *  FreeBitmapWag frees memory of a bitmap
@@ -133,7 +144,7 @@ BitmapWagError InitializeBitmapWag(BitmapWagImg ** bm, const uint32_t height,
  * @param bm bitmap pointer
  * @return BITMAPWAG_SUCCESS if successful
  */
-BitmapWagError FreeBitmapWag(BitmapWagImg ** bm);
+BitmapWagError FreeBitmapWag(BitmapWagImg * bm);
 
 /**
  * GetBitmapHeightWag gets the height of the bitmap
@@ -141,7 +152,7 @@ BitmapWagError FreeBitmapWag(BitmapWagImg ** bm);
  * @param bm bitmap image
  * @return height of bitmap image
  */
-uint32_t GetBitmapWagHeight(BitmapWagImg ** const bm);
+uint32_t GetBitmapWagHeight(const BitmapWagImg * bm);
 
 /**
  * GetBitmapWagWidth gets the height of the bitmap
@@ -149,7 +160,7 @@ uint32_t GetBitmapWagHeight(BitmapWagImg ** const bm);
  * @param bm bitmap image
  * @return width of bitmap image
  */
-uint32_t GetBitmapWagWidth(BitmapWagImg ** const bm);
+uint32_t GetBitmapWagWidth(const BitmapWagImg * bm);
 
 /**
  * SetBitmapWagPixel sets a pixel on the bitmap to the specified color
@@ -162,7 +173,7 @@ uint32_t GetBitmapWagWidth(BitmapWagImg ** const bm);
  * @param b blue component 
  * @return BITMAPWAG_SUCCESS if successful
  */
-BitmapWagError SetBitmapWagPixel(BitmapWagImg ** bm, const uint32_t x, 
+BitmapWagError SetBitmapWagPixel(BitmapWagImg * bm, const uint32_t x, 
     const uint32_t y, const uint8_t r, const uint8_t g, const uint8_t b);
 
 /**
@@ -174,7 +185,7 @@ BitmapWagError SetBitmapWagPixel(BitmapWagImg ** bm, const uint32_t x,
  * @param color pointer to the color value to populate
  * @return BITMAPWAG_SUCCESS if successful
  */
-BitmapWagError GetBitmapWagPixel(BitmapWagImg ** const bm, 
+BitmapWagError GetBitmapWagPixel(const BitmapWagImg * bm, 
     const uint32_t x, const uint32_t y, BitmapWagRgbQuad * color);
 
 // Added to make library compatible with C and C++. 
