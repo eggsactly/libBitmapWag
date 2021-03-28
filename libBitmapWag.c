@@ -886,11 +886,14 @@ BitmapWagError SetBitmapWagPixel(BitmapWagImg ** bmptr, const uint32_t x,
             // Find the index of the color specified in the input
             for(uint16_t i = 0; i < possibleColors; i++)
             {
-                colorUsedInt[i] = 1;
-                colorNotFound = 0;
-                (bm->aColors)[i] = color;
-                indexOfColor = i;
-                break;
+                if(!colorUsedPtr[i])
+                {
+                    colorUsedPtr[i] = 1;
+                    colorNotFound = 0;
+                    (bm->aColors)[i] = color;
+                    indexOfColor = i;
+                    break;
+                }
             }
 
             // If there was no space left in the palette 
