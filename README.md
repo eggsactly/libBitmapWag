@@ -32,13 +32,13 @@ Run the example program by running
 ./bitmap
 ```
 
-To install, which will put the contents of the include/ and lib/ 
+To install, which will put the contents of the include/, lib/, and bin/
 directories into the /usr/local/ directory, run:
 ```
 make install
 ```
 
-After installation you will need to make sure that /usr/local/lib is in your
+After installation you will need to make sure that /usr/local/bin is in your
 LD\_LIBRARY\_PATH so that the dynamic linker can find the library when you 
 run code that links to it. 
 ```
@@ -48,7 +48,7 @@ echo $LD_LIBRARY_PATH
 If the path does not get returned, then you will need to add the following 
 line to your _.profile_ file in your /home/username area. 
 ```
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/bin
 ````
 
 Either source your .profile file or log out and log back in and then you will 
