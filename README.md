@@ -49,8 +49,16 @@ If the path does not get returned, then you will need to add the following
 line to your _.profile_ file in your /home/username area. 
 ```
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/bin
-````
+```
 
 Either source your .profile file or log out and log back in and then you will 
 be ready to link to the library. 
+
+# Coding Style Guidelines 
+
+1. Tabs are four spaces (except in makefiles). 
+2. Line width is limited to 80 characters. 
+3. No printfs in the library code, functions are to only return an error code.
+4. Function implementations shall only be in the .c files.
+5. All source files shall have the GPL copyright banner at the top.
 
