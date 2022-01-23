@@ -967,8 +967,6 @@ BitmapWagError SetBitmapWagPixel(BitmapWagImg * bm, const uint32_t x,
 
     else
     {
-        //TODO: Remove
-        printf("bm->bmih.biBitCount %d\n", bm->bmih.biBitCount);
         return BITMAPWAG_BIBITS_NOT_SUPPORTED;
     }
         
