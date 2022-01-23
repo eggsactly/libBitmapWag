@@ -13,6 +13,8 @@
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with libBitmapWag.  If not, see <https://www.gnu.org/licenses/>.
 
+// bitmap.c is a basic unit test for the libBitmapWag library. 
+
 #include <stdio.h>
 
 #include "BitmapWag.h"

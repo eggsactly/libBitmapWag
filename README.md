@@ -1,9 +1,13 @@
 # About
+libBitmapWag allows you to programatically read, edit, and write bitmap images 
+using an extern C interface.
+
 libBitmapWag is a C library containing functions for reading and writing bitmaps 
 programatically. This library makes a .so for dynamic linking and a .a for 
 static linking. 
 
-For an example of how to use this library, please see the file _bitmap.c_. 
+For an example of how to use this library, please see the example/unit test 
+file _bitmap.c_. 
 
 This work is based on the description of the spec at 
 www.fortunecity.com/skyscraper/windows/364/bmpffrmt.htm 
@@ -11,8 +15,8 @@ www.fortunecity.com/skyscraper/windows/364/bmpffrmt.htm
 This library is meant to have simple dependencies, it relies only on the 
 standard c libraries stdio.h, stdlib.h, and inttypes.h. 
 
-This library has been tested on x86 and has not been tested on ARM or any other
-Big Endian architecture. 
+This library has been tested on x86 and has not been tested on a Big Endian 
+architecture. 
 
 # Building
 Build process was designed for Linux and gcc. 
